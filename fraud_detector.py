@@ -11,137 +11,142 @@ from sklearn.ensemble import RandomForestClassifier
 from imblearn.over_sampling import SMOTE
 from imblearn.pipeline import Pipeline as ImbPipeline
 
-# --- CONFIGURATION & MODEL PATH ---
 MODEL_FILE = "fraud_model.pkl"
 DATA_FILE = "credit_card_fraud_dataset_modified - credit_card_fraud_dataset_modified.csv"
 
-# --- BACKEND: TRAINING FUNCTION ---
 def train_model():
-    """Trains the model and saves it to a pkl file."""
-    if not os.path.exists(DATA_FILE):
-        return False, "Dataset CSV not found. Please ensure it's in the directory."
-    
+    if not os.path.exists(DATA_FILE): return False, "Data Source Missing"
     df = pd.read_csv(DATA_FILE)
     df = df.drop(columns=['TransactionID'], errors='ignore')
-    
-    categorical_features = ['Location', 'MerchantCategory']
-    numerical_features = ['Amount', 'Time', 'CardHolderAge']
-
-    # Impute missing values
-    for col in numerical_features:
-        df[col] = df[col].fillna(df[col].median())
-    for col in categorical_features:
-        df[col] = df[col].fillna(df[col].mode()[0])
-
-    # Preprocessing Pipeline
-    preprocessor = ColumnTransformer(
-        transformers=[
-            ('num', StandardScaler(), numerical_features),
-            ('cat', OneHotEncoder(handle_unknown='ignore'), categorical_features)
-        ])
-
+    cat_cols = ['Location', 'MerchantCategory']
+    num_cols = ['Amount', 'Time', 'CardHolderAge']
+    for col in num_cols: df[col] = df[col].fillna(df[col].median())
+    for col in cat_cols: df[col] = df[col].fillna(df[col].mode()[0])
+    preprocessor = ColumnTransformer([
+        ('num', StandardScaler(), num_cols),
+        ('cat', OneHotEncoder(handle_unknown='ignore'), cat_cols)
+    ])
     X = df.drop('IsFraud', axis=1)
     y = df['IsFraud']
-
     X_train, _, y_train, _ = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
-
-    # Best performing model from your analysis
-    rf_pipeline = ImbPipeline(steps=[
+    pipeline = ImbPipeline([
         ('preprocessor', preprocessor),
         ('smote', SMOTE(random_state=42)),
-        ('classifier', RandomForestClassifier(random_state=42, n_estimators=100))
+        ('classifier', RandomForestClassifier(n_estimators=100, random_state=42, n_jobs=-1))
     ])
+    pipeline.fit(X_train, y_train)
+    joblib.dump(pipeline, MODEL_FILE)
+    return True, "Core Initialized"
 
-    rf_pipeline.fit(X_train, y_train)
-    joblib.dump(rf_pipeline, MODEL_FILE)
-    return True, "Model trained successfully!"
-
-# --- FRONTEND: STREAMLIT UI ---
 def main():
-    st.set_page_config(page_title="FraudShield AI", page_icon="🛡️", layout="wide")
+    st.set_page_config(page_title="FRAUD_SHIELD_V2", page_icon="🏦", layout="wide")
 
-    # Custom CSS for a professional look
     st.markdown("""
         <style>
-        .main { background-color: #f5f7f9; }
-        .stButton>button { width: 100%; border-radius: 5px; height: 3em; background-color: #004a99; color: white; }
-        .result-card { padding: 20px; border-radius: 10px; border: 1px solid #ddd; background-color: white; }
+        .stApp { background: #050505; color: #e0e0e0; }
+        [data-testid="stSidebar"] { background-color: #0a0a0a; border-right: 1px solid #1f1f1f; }
+        div[data-testid="stVerticalBlock"] > div:has(div.stForm) {
+            background: #0f1115;
+            padding: 2rem;
+            border-radius: 12px;
+            border: 1px solid #2d2d2d;
+        }
+        .stButton>button {
+            background: #ffffff;
+            color: #000000;
+            border-radius: 4px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            height: 45px;
+            border: none;
+        }
+        .stButton>button:hover { background: #00ffcc; color: #000000; border: none; }
+        h1, h2, h3 { font-family: 'Inter', sans-serif; letter-spacing: -1px; }
+        .report-box { padding: 24px; border-radius: 8px; margin-bottom: 20px; }
+        .stProgress > div > div > div > div { background-color: #00ffcc; }
         </style>
         """, unsafe_allow_html=True)
 
-    st.title("🛡️ FraudShield: Enterprise Detection System")
-    st.markdown("Automated Real-Time Transaction Risk Assessment")
+    with st.sidebar:
+        st.overline("OPERATIONAL STATUS")
+        st.title("CORE_V2")
+        st.status("ENCRYPTED", state="complete")
+        st.divider()
+        if st.button("RE-SYNC DATABASE"):
+            train_model()
+            st.rerun()
 
-    # Ensure model exists
+    st.title("🏦 FRAUD_SHIELD / ANALYST_PRO")
+    st.caption("AI-POWERED TRANSACTION AUDIT SYSTEM")
+    
     if not os.path.exists(MODEL_FILE):
-        with st.spinner("Initializing AI Engine for the first time..."):
-            success, msg = train_model()
-            if not success:
-                st.error(msg)
-                return
-            st.success(msg)
+        with st.spinner("BUILDING NEURAL PIPELINE..."):
+            train_model()
 
-    # Load Model
     model = joblib.load(MODEL_FILE)
 
-    # Layout
-    col1, col2 = st.columns([1, 1.5])
+    col1, col2 = st.columns([0.4, 0.6], gap="large")
 
     with col1:
-        st.subheader("Transaction Parameters")
-        with st.form("prediction_form"):
-            amount = st.number_input("Transaction Amount ($)", min_value=0.0, value=250.0)
-            txn_time = st.number_input("Time (Seconds)", min_value=0, value=86400)
-            age = st.slider("Cardholder Age", 18, 100, 45)
+        with st.form("audit_form"):
+            st.subheader("TXN_METRICS")
+            amt = st.number_input("TOTAL_AMOUNT (USD)", min_value=0.0, step=0.01, value=1250.00)
             
-            # Use columns for selectboxes to keep it compact
-            loc_list = ["New York", "London", "California", "Online", "Chicago", "Paris", "Tokyo"]
-            cat_list = ["Retail", "Entertainment", "Food", "Travel", "Electronics", "Groceries"]
+            st.divider()
+            st.subheader("ENTITY_PROFILE")
+            age_val = st.slider("ACCOUNT_HOLDER_AGE", 18, 95, 34)
+            cat = st.selectbox("MERCHANT_CLASS", sorted(["Retail", "Electronics", "Crypto_Exchange", "Travel", "Gambling", "Groceries", "Entertainment"]))
+            loc = st.selectbox("GEOGRAPHICAL_ZONE", sorted(["North America", "European Union", "Asia-Pacific", "LATAM", "Middle East", "Offshore"]))
             
-            location = st.selectbox("Transaction Location", sorted(loc_list))
-            category = st.selectbox("Merchant Category", sorted(cat_list))
+            st.divider()
+            st.subheader("NETWORK_DATA")
+            t_val = st.number_input("TIMESTAMP_SEQUENCE (SEC)", value=86400)
             
-            submit = st.form_submit_button("Run Risk Analysis")
+            analyze = st.form_submit_button("EXECUTE AUDIT")
 
     with col2:
-        st.subheader("Analysis Report")
-        if submit:
-            # Prepare Input Data
-            input_df = pd.DataFrame({
-                'Amount': [amount],
-                'Time': [txn_time],
-                'CardHolderAge': [age],
-                'Location': [location],
-                'MerchantCategory': [category]
-            })
+        if analyze:
+            input_data = pd.DataFrame([[amt, t_val, age_val, loc, cat]], 
+                                     columns=['Amount', 'Time', 'CardHolderAge', 'Location', 'MerchantCategory'])
+            
+            with st.spinner("CALCULATING RISK VECTORS..."):
+                time.sleep(0.6)
+                prob = model.predict_proba(input_data)[0][1]
+                is_fraud = prob > 0.5
 
-            # Inference
-            with st.spinner("Analyzing patterns..."):
-                time.sleep(0.8) # Realism delay
-                prediction = model.predict(input_df)[0]
-                probability = model.predict_proba(input_df)[0][1]
-
-            # Results Display
-            if prediction == 1:
-                st.error("### 🚨 HIGH RISK DETECTED")
-                st.write(f"This transaction shows a **{(probability*100):.1f}%** correlation with known fraudulent patterns.")
-                st.progress(probability)
-                st.warning("**Action Required:** Block transaction and notify cardholder.")
+            if is_fraud:
+                st.markdown(f"""
+                    <div class="report-box" style="border: 1px solid #ff4b4b; background: rgba(255, 75, 75, 0.05);">
+                        <h1 style="color: #ff4b4b; margin:0;">CRITICAL_THREAT</h1>
+                        <p style="font-size: 24px;">RISK_INDEX: {(prob*100):.2f}%</p>
+                    </div>
+                """, unsafe_allow_html=True)
+                st.error("ACTION: TRANSACTION_HALT_REQUIRED")
             else:
-                st.success("### ✅ TRANSACTION SECURE")
-                st.write(f"Security score is high. Fraud probability is only **{(probability*100):.1f}%**.")
-                st.progress(probability)
-                st.info("**Action:** Proceed with processing.")
+                st.markdown(f"""
+                    <div class="report-box" style="border: 1px solid #00ffcc; background: rgba(0, 255, 204, 0.05);">
+                        <h1 style="color: #00ffcc; margin:0;">VALIDATED</h1>
+                        <p style="font-size: 24px;">RISK_INDEX: {(prob*100):.2f}%</p>
+                    </div>
+                """, unsafe_allow_html=True)
+                st.success("ACTION: PROCEED_TO_CLEARANCE")
 
+            st.subheader("RISK_CONFIDENCE_INTERVAL")
+            st.progress(prob)
+            
+            with st.expander("VIEW AUDIT_LOG"):
+                st.json({
+                    "timestamp": time.time(),
+                    "input_vector": [amt, t_val, age_val, loc, cat],
+                    "model_confidence": prob,
+                    "status": "FLAGGED" if is_fraud else "CLEARED"
+                })
         else:
-            st.info("Enter transaction data and click 'Run Risk Analysis' to view the security report.")
-
-    # Model Performance Stats in Sidebar
-    st.sidebar.title("Model Metrics")
-    st.sidebar.metric("Algorithm", "Random Forest")
-    st.sidebar.metric("Sampling Method", "SMOTE (Oversampling)")
-    st.sidebar.markdown("---")
-    st.sidebar.caption("System Version: 2.0.4-Stable")
+            st.markdown("""
+                <div style="border: 1px dashed #333; padding: 100px; text-align: center; border-radius: 12px;">
+                    <p style="color: #666; letter-spacing: 2px;">AWAITING_INPUT_SIGNAL</p>
+                </div>
+            """, unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main()
