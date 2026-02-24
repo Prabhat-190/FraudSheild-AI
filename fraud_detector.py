@@ -68,7 +68,7 @@ def main():
         """, unsafe_allow_html=True)
 
     with st.sidebar:
-        st.overline("OPERATIONAL STATUS")
+        st.caption("OPERATIONAL STATUS")
         st.title("CORE_V2")
         st.status("ENCRYPTED", state="complete")
         st.divider()
