@@ -100,6 +100,7 @@ streamlit run fraud_detector.py
 
 ## 👨‍💻 Author
 Prabhat Kumar
+
 Mathematics & Computing  
 IIT Kharagpur  
 
