@@ -77,7 +77,6 @@ The idea was to make it feel like a real enterprise security monitoring tool rat
 FraudSheild-AI
 │
 ├── fraud_detector.py
-├── fraud_model.pkl
 ├── requirements.txt
 └── README.md
 ```
