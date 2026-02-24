@@ -74,7 +74,7 @@ The idea was to make it feel like a real enterprise security monitoring tool rat
 ## 📂 Project Structure
 
 ```
-fraud_detector-project/
+FraudSheild-AI
 │
 ├── fraud_detector.py
 ├── fraud_model.pkl
