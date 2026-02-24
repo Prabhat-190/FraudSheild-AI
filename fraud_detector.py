@@ -43,110 +43,138 @@ def main():
 
     st.markdown("""
         <style>
-        .stApp { background: #050505; color: #e0e0e0; }
-        [data-testid="stSidebar"] { background-color: #0a0a0a; border-right: 1px solid #1f1f1f; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
+        
+        .stApp {
+            background: #050505;
+            color: #e0e0e0;
+            animation: fadeIn 1.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            0% { opacity: 0; transform: translateY(10px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+
+        .main .block-container {
+            max-width: 1200px;
+            padding-top: 2rem;
+        }
+
         div[data-testid="stVerticalBlock"] > div:has(div.stForm) {
             background: #0f1115;
-            padding: 2rem;
-            border-radius: 12px;
+            padding: 2.5rem;
+            border-radius: 20px;
             border: 1px solid #2d2d2d;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
+        
+        div[data-testid="stVerticalBlock"] > div:has(div.stForm):hover {
+            border-color: #00ffcc;
+            box-shadow: 0 10px 30px rgba(0, 255, 204, 0.1);
+            transform: scale(1.01);
+        }
+
         .stButton>button {
-            background: #ffffff;
-            color: #000000;
-            border-radius: 4px;
+            background: linear-gradient(90deg, #00ffcc, #00d2ff);
+            color: #000000 !important;
+            border-radius: 12px;
             font-weight: 700;
-            letter-spacing: 1px;
-            height: 45px;
             border: none;
+            padding: 0.75rem 2rem;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 2px;
         }
-        .stButton>button:hover { background: #00ffcc; color: #000000; border: none; }
-        h1, h2, h3 { font-family: 'Inter', sans-serif; letter-spacing: -1px; }
-        .report-box { padding: 24px; border-radius: 8px; margin-bottom: 20px; }
-        .stProgress > div > div > div > div { background-color: #00ffcc; }
+
+        .stButton>button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0, 255, 204, 0.4);
+            filter: brightness(1.1);
+        }
+
+        .pulse-red {
+            animation: pulse-red 2s infinite;
+        }
+        @keyframes pulse-red {
+            0% { box-shadow: 0 0 0 0 rgba(255, 75, 75, 0.4); }
+            70% { box-shadow: 0 0 0 15px rgba(255, 75, 75, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 75, 75, 0); }
+        }
         </style>
         """, unsafe_allow_html=True)
 
-    with st.sidebar:
-        st.caption("OPERATIONAL STATUS")
-        st.title("CORE_V2")
-        st.status("ENCRYPTED", state="complete")
-        st.divider()
-        if st.button("RE-SYNC DATABASE"):
-            train_model()
-            st.rerun()
-
-    st.title("🏦 FRAUD_SHIELD / ANALYST_PRO")
-    st.caption("AI-POWERED TRANSACTION AUDIT SYSTEM")
-    
     if not os.path.exists(MODEL_FILE):
-        with st.spinner("BUILDING NEURAL PIPELINE..."):
+        with st.spinner("🧠 SYNCING NEURAL NETWORK..."):
             train_model()
 
     model = joblib.load(MODEL_FILE)
 
-    col1, col2 = st.columns([0.4, 0.6], gap="large")
+    st.title("🏦 FRAUD_SHIELD / AUDIT_PRO")
+    st.markdown("<p style='opacity:0.6; letter-spacing:3px;'>ADVANCED RISK MITIGATION ENGINE</p>", unsafe_allow_html=True)
+    st.divider()
+
+    col1, col2 = st.columns([0.45, 0.55], gap="large")
 
     with col1:
         with st.form("audit_form"):
-            st.subheader("TXN_METRICS")
-            amt = st.number_input("TOTAL_AMOUNT (USD)", min_value=0.0, step=0.01, value=1250.00)
+            st.markdown("### 📥 INPUT_STREAM")
+            amt = st.number_input("TXN_AMOUNT (USD)", min_value=0.0, step=10.0, value=250.00)
+            t_val = st.number_input("TIMESTAMP_SEC", value=86400)
             
-            st.divider()
-            st.subheader("ENTITY_PROFILE")
-            age_val = st.slider("ACCOUNT_HOLDER_AGE", 18, 95, 34)
-            cat = st.selectbox("MERCHANT_CLASS", sorted(["Retail", "Electronics", "Crypto_Exchange", "Travel", "Gambling", "Groceries", "Entertainment"]))
-            loc = st.selectbox("GEOGRAPHICAL_ZONE", sorted(["North America", "European Union", "Asia-Pacific", "LATAM", "Middle East", "Offshore"]))
+            st.markdown("<br>", unsafe_allow_html=True)
+            st.markdown("### 👤 SUBJECT_PROFILE")
+            age_val = st.slider("HOLDER_AGE", 18, 95, 30)
             
-            st.divider()
-            st.subheader("NETWORK_DATA")
-            t_val = st.number_input("TIMESTAMP_SEQUENCE (SEC)", value=86400)
+            loc = st.selectbox("GEO_LOCATION", sorted(["California", "New York", "London", "Online", "Tokyo", "Berlin", "Paris"]))
+            cat = st.selectbox("MERCHANT_CLASS", sorted(["Food", "Retail", "Electronics", "Crypto", "Entertainment", "Travel"]))
             
-            analyze = st.form_submit_button("EXECUTE AUDIT")
+            st.markdown("<br>", unsafe_allow_html=True)
+            analyze = st.form_submit_button("RUN NEURAL AUDIT")
 
     with col2:
+        st.markdown("### 📊 ANALYSIS_REPORT")
         if analyze:
             input_data = pd.DataFrame([[amt, t_val, age_val, loc, cat]], 
                                      columns=['Amount', 'Time', 'CardHolderAge', 'Location', 'MerchantCategory'])
             
-            with st.spinner("CALCULATING RISK VECTORS..."):
-                time.sleep(0.6)
-                prob = model.predict_proba(input_data)[0][1]
-                is_fraud = prob > 0.5
+            progress_bar = st.progress(0)
+            for percent_complete in range(100):
+                time.sleep(0.01)
+                progress_bar.progress(percent_complete + 1)
+            
+            prob = model.predict_proba(input_data)[0][1]
+            is_fraud = prob > 0.5
 
             if is_fraud:
                 st.markdown(f"""
-                    <div class="report-box" style="border: 1px solid #ff4b4b; background: rgba(255, 75, 75, 0.05);">
-                        <h1 style="color: #ff4b4b; margin:0;">CRITICAL_THREAT</h1>
-                        <p style="font-size: 24px;">RISK_INDEX: {(prob*100):.2f}%</p>
+                    <div style="background: rgba(255, 75, 75, 0.1); padding: 30px; border-radius: 15px; border: 1px solid #ff4b4b;" class="pulse-red">
+                        <h1 style="color: #ff4b4b; margin:0;">🚨 FRAUD_DETECTED</h1>
+                        <p style="font-size: 20px; color: #fff; margin-top: 10px;">RISK_PROBABILITY: <b>{(prob*100):.1f}%</b></p>
                     </div>
                 """, unsafe_allow_html=True)
-                st.error("ACTION: TRANSACTION_HALT_REQUIRED")
+                st.error("THREAT_LEVEL: CRITICAL / ACTION: REJECT_TRANSACTION")
             else:
                 st.markdown(f"""
-                    <div class="report-box" style="border: 1px solid #00ffcc; background: rgba(0, 255, 204, 0.05);">
-                        <h1 style="color: #00ffcc; margin:0;">VALIDATED</h1>
-                        <p style="font-size: 24px;">RISK_INDEX: {(prob*100):.2f}%</p>
+                    <div style="background: rgba(0, 255, 204, 0.1); padding: 30px; border-radius: 15px; border: 1px solid #00ffcc;">
+                        <h1 style="color: #00ffcc; margin:0;">✅ TRANSACTION_SECURE</h1>
+                        <p style="font-size: 20px; color: #fff; margin-top: 10px;">RISK_PROBABILITY: <b>{(prob*100):.1f}%</b></p>
                     </div>
                 """, unsafe_allow_html=True)
-                st.success("ACTION: PROCEED_TO_CLEARANCE")
+                st.success("THREAT_LEVEL: LOW / ACTION: AUTHORIZE_TXN")
 
-            st.subheader("RISK_CONFIDENCE_INTERVAL")
+            st.markdown("### RISK_INDEX_GAUGE")
             st.progress(prob)
-            
-            with st.expander("VIEW AUDIT_LOG"):
-                st.json({
-                    "timestamp": time.time(),
-                    "input_vector": [amt, t_val, age_val, loc, cat],
-                    "model_confidence": prob,
-                    "status": "FLAGGED" if is_fraud else "CLEARED"
-                })
         else:
             st.markdown("""
-                <div style="border: 1px dashed #333; padding: 100px; text-align: center; border-radius: 12px;">
-                    <p style="color: #666; letter-spacing: 2px;">AWAITING_INPUT_SIGNAL</p>
+                <div style="border: 2px dashed #2d2d2d; padding: 120px; text-align: center; border-radius: 20px; opacity: 0.5;">
+                    <p style="letter-spacing: 5px;">AWAITING_SIGNAL_INPUT</p>
                 </div>
             """, unsafe_allow_html=True)
+
+    st.sidebar.markdown("---")
+    st.sidebar.caption("System Version: 2.1.0-Stable")
+    st.sidebar.caption("Last Sync: " + time.strftime("%H:%M:%S"))
 
 if __name__ == "__main__":
     main()
