@@ -98,8 +98,6 @@ streamlit run fraud_detector.py
 
 <img width="1469" height="819" alt="Screenshot 2026-02-24 at 4 14 53 PM" src="https://github.com/user-attachments/assets/e35eb606-0b4f-45fc-a54a-b7bc50625c9b" />
 
-## 👨‍💻 Author
-Prabhat Kumar
  
 
 ---
