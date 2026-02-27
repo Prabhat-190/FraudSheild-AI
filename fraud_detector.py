@@ -4,6 +4,7 @@ import joblib
 import os
 import time
 import streamlit as st
+import ccxt
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.compose import ColumnTransformer
@@ -39,142 +40,73 @@ def train_model():
     return True, "Core Initialized"
 
 def main():
-    st.set_page_config(page_title="FRAUD_SHIELD_V2", page_icon="🏦", layout="wide")
+    st.set_page_config(page_title="CRYPTO_SHIELD_PRO", page_icon="₿", layout="wide")
 
     st.markdown("""
         <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
-        
-        .stApp {
-            background: #050505;
-            color: #e0e0e0;
-            animation: fadeIn 1.5s ease-in;
-        }
-
-        @keyframes fadeIn {
-            0% { opacity: 0; transform: translateY(10px); }
-            100% { opacity: 1; transform: translateY(0); }
-        }
-
-        .main .block-container {
-            max-width: 1200px;
-            padding-top: 2rem;
-        }
-
-        div[data-testid="stVerticalBlock"] > div:has(div.stForm) {
-            background: #0f1115;
-            padding: 2.5rem;
-            border-radius: 20px;
-            border: 1px solid #2d2d2d;
-            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-        
-        div[data-testid="stVerticalBlock"] > div:has(div.stForm):hover {
-            border-color: #00ffcc;
-            box-shadow: 0 10px 30px rgba(0, 255, 204, 0.1);
-            transform: scale(1.01);
-        }
-
-        .stButton>button {
-            background: linear-gradient(90deg, #00ffcc, #00d2ff);
-            color: #000000 !important;
-            border-radius: 12px;
-            font-weight: 700;
-            border: none;
-            padding: 0.75rem 2rem;
-            transition: all 0.3s ease;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-        }
-
-        .stButton>button:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 20px rgba(0, 255, 204, 0.4);
-            filter: brightness(1.1);
-        }
-
-        .pulse-red {
-            animation: pulse-red 2s infinite;
-        }
-        @keyframes pulse-red {
-            0% { box-shadow: 0 0 0 0 rgba(255, 75, 75, 0.4); }
-            70% { box-shadow: 0 0 0 15px rgba(255, 75, 75, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(255, 75, 75, 0); }
-        }
+        .stApp { background: #050505; color: #e0e0e0; }
+        .live-tag { color: #00ffcc; font-weight: bold; animation: blinker 1.2s linear infinite; }
+        @keyframes blinker { 50% { opacity: 0; } }
+        div[data-testid="stMetricValue"] { color: #00ffcc !important; }
         </style>
         """, unsafe_allow_html=True)
 
-    if not os.path.exists(MODEL_FILE):
-        with st.spinner("🧠 SYNCING NEURAL NETWORK..."):
-            train_model()
-
+    if not os.path.exists(MODEL_FILE): train_model()
     model = joblib.load(MODEL_FILE)
 
-    st.title("🏦 FRAUD_SHIELD / AUDIT_PRO")
-    st.markdown("<p style='opacity:0.6; letter-spacing:3px;'>ADVANCED RISK MITIGATION ENGINE</p>", unsafe_allow_html=True)
-    st.divider()
+    st.title("₿ CRYPTO_SHIELD / LIVE_EXCHANGE")
+    
+    with st.sidebar:
+        st.header("CONNECTION_SETTINGS")
+        exchange_id = st.selectbox("EXCHANGE", ["binance", "coinbase", "kraken"])
+        crypto_mode = st.toggle("ACTIVATE LIVE CRYPTO FEED", value=False)
+        st.divider()
+        st.caption("Using CCXT Unified API Library")
 
-    col1, col2 = st.columns([0.45, 0.55], gap="large")
+    if crypto_mode:
+        st.markdown('<p class="live-tag">● CONNECTED_TO_EXCHANGE_STREAM</p>', unsafe_allow_html=True)
+        
+        # Initialize Exchange
+        client = getattr(ccxt, exchange_id)()
+        placeholder = st.empty()
 
-    with col1:
-        with st.form("audit_form"):
-            st.markdown("### 📥 INPUT_STREAM")
-            amt = st.number_input("TXN_AMOUNT (USD)", min_value=0.0, step=10.0, value=250.00)
-            t_val = st.number_input("TIMESTAMP_SEC", value=86400)
-            
-            st.markdown("<br>", unsafe_allow_html=True)
-            st.markdown("### 👤 SUBJECT_PROFILE")
-            age_val = st.slider("HOLDER_AGE", 18, 95, 30)
-            
-            loc = st.selectbox("GEO_LOCATION", sorted(["California", "New York", "London", "Online", "Tokyo", "Berlin", "Paris"]))
-            cat = st.selectbox("MERCHANT_CLASS", sorted(["Food", "Retail", "Electronics", "Crypto", "Entertainment", "Travel"]))
-            
-            st.markdown("<br>", unsafe_allow_html=True)
-            analyze = st.form_submit_button("RUN NEURAL AUDIT")
+        while crypto_mode:
+            try:
+                # 1. Ingest: Fetch live ticker data
+                ticker = client.fetch_ticker('BTC/USDT')
+                
+                # 2. Transform: Map crypto data to your ML features
+                live_txn = {
+                    'Amount': ticker['last'],
+                    'Time': int(time.time() % 86400),
+                    'CardHolderAge': 30,
+                    'Location': 'Online',
+                    'MerchantCategory': 'Crypto'
+                }
+                input_df = pd.DataFrame([live_txn])
 
-    with col2:
-        st.markdown("### 📊 ANALYSIS_REPORT")
-        if analyze:
-            input_data = pd.DataFrame([[amt, t_val, age_val, loc, cat]], 
-                                     columns=['Amount', 'Time', 'CardHolderAge', 'Location', 'MerchantCategory'])
-            
-            progress_bar = st.progress(0)
-            for percent_complete in range(100):
-                time.sleep(0.01)
-                progress_bar.progress(percent_complete + 1)
-            
-            prob = model.predict_proba(input_data)[0][1]
-            is_fraud = prob > 0.5
+                # 3. Inference: Run through saved pipeline
+                prob = model.predict_proba(input_df)[0][1]
+                
+                with placeholder.container():
+                    c1, c2, c3 = st.columns(3)
+                    c1.metric("BTC_PRICE", f"${ticker['last']:,}")
+                    c2.metric("VOL_24H", f"{ticker['quoteVolume']:.2f}")
+                    c3.metric("RISK_INDEX", f"{prob*100:.2f}%")
 
-            if is_fraud:
-                st.markdown(f"""
-                    <div style="background: rgba(255, 75, 75, 0.1); padding: 30px; border-radius: 15px; border: 1px solid #ff4b4b;" class="pulse-red">
-                        <h1 style="color: #ff4b4b; margin:0;">🚨 FRAUD_DETECTED</h1>
-                        <p style="font-size: 20px; color: #fff; margin-top: 10px;">RISK_PROBABILITY: <b>{(prob*100):.1f}%</b></p>
-                    </div>
-                """, unsafe_allow_html=True)
-                st.error("THREAT_LEVEL: CRITICAL / ACTION: REJECT_TRANSACTION")
-            else:
-                st.markdown(f"""
-                    <div style="background: rgba(0, 255, 204, 0.1); padding: 30px; border-radius: 15px; border: 1px solid #00ffcc;">
-                        <h1 style="color: #00ffcc; margin:0;">✅ TRANSACTION_SECURE</h1>
-                        <p style="font-size: 20px; color: #fff; margin-top: 10px;">RISK_PROBABILITY: <b>{(prob*100):.1f}%</b></p>
-                    </div>
-                """, unsafe_allow_html=True)
-                st.success("THREAT_LEVEL: LOW / ACTION: AUTHORIZE_TXN")
-
-            st.markdown("### RISK_INDEX_GAUGE")
-            st.progress(prob)
-        else:
-            st.markdown("""
-                <div style="border: 2px dashed #2d2d2d; padding: 120px; text-align: center; border-radius: 20px; opacity: 0.5;">
-                    <p style="letter-spacing: 5px;">AWAITING_SIGNAL_INPUT</p>
-                </div>
-            """, unsafe_allow_html=True)
-
-    st.sidebar.markdown("---")
-    st.sidebar.caption("System Version: 2.1.0-Stable")
-    st.sidebar.caption("Last Sync: " + time.strftime("%H:%M:%S"))
+                    if prob > 0.5:
+                        st.error(f"🚨 ANOMALY: High Risk Pattern detected in Trade Stream")
+                    else:
+                        st.success("✅ TRANSACTION_FLOW: SECURE")
+                    
+                    st.dataframe(input_df, use_container_width=True)
+                
+                time.sleep(2) # Stream interval
+            except Exception as e:
+                st.error(f"Connection Lost: {e}")
+                break
+    else:
+        st.info("Select an exchange and toggle 'ACTIVATE LIVE FEED' to start the neural audit.")
 
 if __name__ == "__main__":
     main()
