@@ -15,8 +15,9 @@ from imblearn.pipeline import Pipeline as ImbPipeline
 MODEL_FILE = "fraud_model.pkl"
 DATA_FILE = "credit_card_fraud_dataset_modified - credit_card_fraud_dataset_modified.csv"
 
+# --- SYSTEM INITIALIZATION ---
 def train_model():
-    if not os.path.exists(DATA_FILE): return False, "Data Source Missing"
+    if not os.path.exists(DATA_FILE): return False
     df = pd.read_csv(DATA_FILE)
     df = df.drop(columns=['TransactionID'], errors='ignore')
     cat_cols = ['Location', 'MerchantCategory']
@@ -37,76 +38,94 @@ def train_model():
     ])
     pipeline.fit(X_train, y_train)
     joblib.dump(pipeline, MODEL_FILE)
-    return True, "Core Initialized"
+    return True
 
+def fetch_live_crypto_data(symbol="BTC/USDT"):
+    exchange = ccxt.binance()
+    ticker = exchange.fetch_ticker(symbol)
+    return {
+        'Amount': ticker['last'],
+        'Time': int(time.time() % 86400),
+        'CardHolderAge': 30,
+        'Location': 'Global_Node',
+        'MerchantCategory': 'Crypto'
+    }
+
+# --- UI INTERFACE ---
 def main():
-    st.set_page_config(page_title="CRYPTO_SHIELD_PRO", page_icon="₿", layout="wide")
+    st.set_page_config(page_title="FRAUD_SHIELD_V3", page_icon="🛡️", layout="wide")
 
     st.markdown("""
         <style>
-        .stApp { background: #050505; color: #e0e0e0; }
-        .live-tag { color: #00ffcc; font-weight: bold; animation: blinker 1.2s linear infinite; }
-        @keyframes blinker { 50% { opacity: 0; } }
+        .stApp { background: #050505; color: #e0e0e0; animation: fadeIn 1.2s ease-in; }
+        @keyframes fadeIn { 0% { opacity: 0; } 100% { opacity: 1; } }
+        .stTabs [data-baseweb="tab-list"] { gap: 24px; }
+        .stTabs [data-baseweb="tab"] { height: 50px; background-color: #0f1115; border-radius: 8px; color: #666; }
+        .stTabs [aria-selected="true"] { background-color: #00ffcc; color: #000 !important; font-weight: bold; }
         div[data-testid="stMetricValue"] { color: #00ffcc !important; }
         </style>
         """, unsafe_allow_html=True)
 
-    if not os.path.exists(MODEL_FILE): train_model()
+    if not os.path.exists(MODEL_FILE):
+        with st.spinner("INITIATING NEURAL CORE..."): train_model()
+    
     model = joblib.load(MODEL_FILE)
 
-    st.title("₿ CRYPTO_SHIELD / LIVE_EXCHANGE")
-    
-    with st.sidebar:
-        st.header("CONNECTION_SETTINGS")
-        exchange_id = st.selectbox("EXCHANGE", ["binance", "coinbase", "kraken"])
-        crypto_mode = st.toggle("ACTIVATE LIVE CRYPTO FEED", value=False)
-        st.divider()
-        st.caption("Using CCXT Unified API Library")
+    st.title("🛡️ FRAUD_SHIELD / AUDIT_PRO")
+    st.caption("AI-POWERED RISK MONITORING & LIVE CRYPTO AUDIT")
+    st.divider()
 
-    if crypto_mode:
-        st.markdown('<p class="live-tag">● CONNECTED_TO_EXCHANGE_STREAM</p>', unsafe_allow_html=True)
+    tab1, tab2 = st.tabs(["📊 ANALYST_AUDITOR", "₿ LIVE_CRYPTO_STREAM"])
+
+    # --- TAB 1: MANUAL AUDIT ---
+    with tab1:
+        col1, col2 = st.columns([0.45, 0.55], gap="large")
+        with col1:
+            with st.form("audit_form"):
+                st.subheader("INPUT_STREAM")
+                amt = st.number_input("TXN_AMOUNT (USD)", value=250.00)
+                age_val = st.slider("HOLDER_AGE", 18, 95, 30)
+                loc = st.selectbox("LOCATION", ["California", "New York", "London", "Online", "Tokyo"])
+                cat = st.selectbox("CATEGORY", ["Retail", "Electronics", "Crypto", "Entertainment"])
+                analyze = st.form_submit_button("RUN AUDIT")
         
-        # Initialize Exchange
-        client = getattr(ccxt, exchange_id)()
-        placeholder = st.empty()
-
-        while crypto_mode:
-            try:
-                # 1. Ingest: Fetch live ticker data
-                ticker = client.fetch_ticker('BTC/USDT')
-                
-                # 2. Transform: Map crypto data to your ML features
-                live_txn = {
-                    'Amount': ticker['last'],
-                    'Time': int(time.time() % 86400),
-                    'CardHolderAge': 30,
-                    'Location': 'Online',
-                    'MerchantCategory': 'Crypto'
-                }
-                input_df = pd.DataFrame([live_txn])
-
-                # 3. Inference: Run through saved pipeline
+        with col2:
+            if analyze:
+                input_df = pd.DataFrame([[amt, int(time.time()%86400), age_val, loc, cat]], 
+                                       columns=['Amount', 'Time', 'CardHolderAge', 'Location', 'MerchantCategory'])
                 prob = model.predict_proba(input_df)[0][1]
-                
+                if prob > 0.5:
+                    st.error(f"🚨 ALERT: HIGH RISK DETECTED ({(prob*100):.1f}%)")
+                else:
+                    st.success(f"✅ SECURE: Risk Score ({(prob*100):.1f}%)")
+                st.progress(prob)
+
+    # --- TAB 2: LIVE CRYPTO FEED ---
+    with tab2:
+        st.subheader("📡 EXCHANGE_LIVE_FEED (BINANCE)")
+        live_active = st.toggle("ACTIVATE NEURAL MONITORING")
+        
+        if live_active:
+            placeholder = st.empty()
+            while live_active:
                 with placeholder.container():
-                    c1, c2, c3 = st.columns(3)
-                    c1.metric("BTC_PRICE", f"${ticker['last']:,}")
-                    c2.metric("VOL_24H", f"{ticker['quoteVolume']:.2f}")
-                    c3.metric("RISK_INDEX", f"{prob*100:.2f}%")
+                    raw_txn = fetch_live_crypto_data()
+                    input_df = pd.DataFrame([raw_txn])
+                    prob = model.predict_proba(input_df)[0][1]
+                    
+                    m1, m2, m3 = st.columns(3)
+                    m1.metric("LIVE PRICE (BTC)", f"${raw_txn['Amount']:,}")
+                    m2.metric("RISK INDEX", f"{prob*100:.2f}%")
+                    m3.metric("STATUS", "ANOMALY" if prob > 0.5 else "NOMINAL")
 
                     if prob > 0.5:
-                        st.error(f"🚨 ANOMALY: High Risk Pattern detected in Trade Stream")
+                        st.markdown("<div style='background:#4d0000; padding:20px; border-radius:10px; border:1px solid red;'>🚨 CRITICAL: Anomalous Volatility Signature Detected</div>", unsafe_allow_html=True)
                     else:
-                        st.success("✅ TRANSACTION_FLOW: SECURE")
+                        st.markdown("<div style='background:#00261a; padding:20px; border-radius:10px; border:1px solid #00ffcc;'>✅ STABLE: Network Traffic Verified Nominal</div>", unsafe_allow_html=True)
                     
-                    st.dataframe(input_df, use_container_width=True)
-                
-                time.sleep(2) # Stream interval
-            except Exception as e:
-                st.error(f"Connection Lost: {e}")
-                break
-    else:
-        st.info("Select an exchange and toggle 'ACTIVATE LIVE FEED' to start the neural audit.")
+                    time.sleep(2)
+        else:
+            st.info("System Standby. Toggle 'Activate Neural Monitoring' to begin the Binance stream.")
 
 if __name__ == "__main__":
     main()
